@@ -1,6 +1,7 @@
 // external 3rd party modules
 const inquirer = require('inquirer');
 const mysql = require('mysql');
+const fig = require("figlet");
 
 const connection = mysql.createConnection({
     host: "localhost",
@@ -34,7 +35,7 @@ const userPref = () => {
                 case "View All Employees":
                     getAllEmployees();
                     break;
-                case "View All Employees by Department":
+                case "View All Department":
                     getAllDept();
                     break;
                 case "View All Roles":
@@ -50,6 +51,7 @@ const userPref = () => {
                     addDept();
                     break;
                 case "Update Employee Role":
+                    updateEmployeeRole();
                     break;
                 case "Done":
                     console.log("Goodbye!")
@@ -57,7 +59,7 @@ const userPref = () => {
                     break;
             }
         });
-}
+};
 
 const getAllEmployees = () => {
     const query = 'SELECT * FROM employee';
@@ -110,7 +112,7 @@ const addDept = () => {
                 }
             );
         });
-}
+};
 
 const addRole = () => {
     console.log('Ok lets get some information for the Role:\n');
@@ -162,7 +164,7 @@ const addRole = () => {
                 );
             });
     })
-}
+};
 
 const addEmployee = () => {
     let newEmployee = {};
@@ -242,14 +244,86 @@ const addEmployee = () => {
                 })
             });
     })
-}
+};
+
+
+const updateEmployeeRole = () => {
+    let upEmployee = {};
+    console.log('Ok lets the Employee to update:\n');
+    const query = 'SELECT * FROM employee';
+    connection.query(query, (err, employees) => {
+        if (err) throw err;
+        inquirer.prompt([
+            {
+                type: "list",
+                name: "employeeName",
+                choices: () => {
+                    let eArray = [];
+                    for (var i = 0; i < employees.length; i++) {
+                        eArray.push(employees[i].first_name);
+                    }
+                    return eArray;
+                },
+                message: "Which Employee do you want to update the role for?"
+            }
+        ]
+        )
+            .then((data) => {
+                const eChosen = employees.filter((e) => e.first_name === data.employeeName);
+                upEmployee.id = eChosen[0].id;
+                const query = 'SELECT * FROM role';
+                connection.query(query, (err, roles) => {
+                    if (err) throw err;
+                    inquirer.prompt([
+                        {
+                            type: "list",
+                            name: "roleName",
+                            choices: () => {
+                                let roleArray = [];
+                                for (var i = 0; i < roles.length; i++) {
+                                    roleArray.push(roles[i].title);
+                                }
+                                return roleArray;
+                            },
+                            message: "What is the new role for this Employee?"
+                        }
+                    ]
+                    )
+                        .then((data) => {
+                            const roleChosen = roles.filter((roles) => roles.title === data.roleName);
+                            console.log("test");
+                            const query = connection.query(
+                                'UPDATE employee SET ? WHERE ?',
+                                [
+                                    {
+                                        role_id: roleChosen[0].id,
+                                    },
+                                    {
+                                        id: upEmployee.id,
+                                    }
+                                ],
+                                (err, res) => {
+                                    if (err) throw err;
+                                    console.log(`Employee role updated!\n`);
+                                    userPref();
+                                }
+                            );
+                        });
+                })
+            });
+    })
+};
 
 
 
 // function to initialize app
 function init() {
-    console.log(`Welcome to Employee Management System `);
-    console.log(`Let me ask you a few questions to get you started:`);
+    fig("Employee \n \n Manager", (err, data) => {
+        if (err) throw err;
+        console.log(data);
+    })
+    //console.log(`Welcome to Employee Management System `);
+    //console.log(`Let me ask you a few questions to get you started:`);
     connection.connect((err) => {
         if (err) throw err;
         userPref();
